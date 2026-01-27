@@ -18,7 +18,7 @@ const regionAPlatforma = {
 
 // Función para verificar cuenta en Riot API
 async function verificarCuentaRiot(gameName, tagLine, region) {
-    const routing = 'americas'; // LAN, LAS, NA, BR usan americas
+    const routing = 'americas';
     const url = `https://${routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
     
     console.log('Verificando cuenta - gameName:', gameName);
@@ -96,7 +96,7 @@ async function obtenerRangos(puuid, plataforma) {
         
         if (response.status === 200) {
             const data = await response.json();
-            console.log('Datos de rangos:', data); // TEMPORAL PARA DEBUG
+            console.log('Datos de rangos:', data);
             const rangos = {
                 soloq: null,
                 flex: null
@@ -141,7 +141,6 @@ async function obtenerCampeonesFavoritos(puuid, plataforma) {
         if (response.status === 200) {
             const data = await response.json();
             
-            // Obtener nombres y emojis de los campeones
             const campeones = await Promise.all(
                 data.map(async (campeon) => {
                     const champData = await obtenerChampionPorId(campeon.championId);
@@ -179,18 +178,14 @@ const queueNames = {
     1300: 'Nexus Blitz',
     1400: 'Spellbook Definitivo',
     1900: 'Pick URF',
-    // Agregar más si es necesario
 };
 
-// Función para obtener las últimas 3 partidas (solo normales, rankeds, ARAM, clash)
+// Función para obtener las últimas 3 partidas
 async function obtenerUltimasPartidas(puuid, plataforma) {
-    const routing = 'americas'; // LAN, LAS, NA, BR usan americas
-    
-    // IDs de colas que queremos mostrar
-    const colasPermitidas = [400, 420, 430, 440, 450, 700]; // Normal Draft, Solo/Duo, Normal Blind, Flexible, ARAM, Clash
+    const routing = 'americas';
+    const colasPermitidas = [400, 420, 430, 440, 450, 700];
     
     try {
-        // Obtener lista de partidas (últimas 20 para tener suficientes después de filtrar)
         const matchListUrl = `https://${routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=20`;
         const matchListResponse = await fetch(matchListUrl, {
             headers: {
@@ -208,11 +203,9 @@ async function obtenerUltimasPartidas(puuid, plataforma) {
             return [];
         }
         
-        // Obtener detalles de cada partida y filtrar
         const partidasFiltradas = [];
         
         for (const matchId of matchList) {
-            // Si ya tenemos 3 partidas, detenerse
             if (partidasFiltradas.length >= 3) {
                 break;
             }
@@ -234,21 +227,17 @@ async function obtenerUltimasPartidas(puuid, plataforma) {
                 
                 console.log('Queue ID:', queueId, 'Queue Name:', queueNames[queueId] || 'Desconocida');
                 
-                // Solo procesar si la cola está en la lista permitida
                 if (!colasPermitidas.includes(queueId)) {
                     continue;
                 }
                 
-                // Encontrar los datos del jugador en la partida
                 const participantData = matchData.info.participants.find(p => p.puuid === puuid);
                 
                 if (!participantData) {
                     continue;
                 }
                 
-                // Obtener información del campeón
                 const champData = await obtenerChampionPorId(participantData.championId);
-                
                 const queueName = queueNames[queueId] || 'Partida';
                 
                 partidasFiltradas.push({
@@ -271,45 +260,43 @@ async function obtenerUltimasPartidas(puuid, plataforma) {
 }
 
 async function ejecutar(message) {
-    // Enviar mensaje privado primero
+    const esEnDM = message.channel.isDMBased();
+    console.log('Ejecutando registro, es en DM:', esEnDM);
+    
     try {
-        const dmChannel = await message.author.createDM();
+        const dmChannel = esEnDM ? message.channel : await message.author.createDM();
+        console.log('Canal DM obtenido');
         
         // Buscar mensajes previos del bot en el DM
         const mensajesPrevios = await dmChannel.messages.fetch({ limit: 50 });
+        console.log('Mensajes previos obtenidos:', mensajesPrevios.size);
         
-        // Filtrar mensajes de registro del bot
         const mensajesRegistro = mensajesPrevios.filter(msg => 
             msg.author.id === message.client.user.id && 
             (msg.content.includes('Bienvenido al proceso de registro') ||
             msg.content.includes('Empecemos con el registro de tu cuenta de League of Legends.'))
         );
         
-        // Borrar solo si el usuario no respondió después del mensaje de registro
         for (const [, msgBot] of mensajesRegistro) {
-            // Buscar si hay algún mensaje del usuario después de este mensaje del bot
             const mensajesDespues = mensajesPrevios.filter(msg => 
                 msg.author.id === message.author.id && 
                 msg.createdTimestamp > msgBot.createdTimestamp
             );
             
-            // Si NO hay mensajes del usuario después, borrar el mensaje del bot
             if (mensajesDespues.size === 0) {
                 await msgBot.delete().catch(() => {});
             }
         }
         
-        // Marcar usuario en proceso de registro - esperando Riot ID
         const tiempoInicio = Date.now();
         usuariosEnRegistro.set(message.author.id, { 
             etapa: 'riotid',
             tiempoInicio: tiempoInicio
         });
+        console.log('Usuario agregado al registro');
         
-        // Timer de 1 hora para timeout
         setTimeout(async () => {
             const estadoActual = usuariosEnRegistro.get(message.author.id);
-            // Solo hacer timeout si el usuario sigue en proceso y es el mismo proceso
             if (estadoActual && estadoActual.tiempoInicio === tiempoInicio) {
                 usuariosEnRegistro.delete(message.author.id);
                 try {
@@ -318,16 +305,25 @@ async function ejecutar(message) {
                     // Ignorar si no se puede enviar DM
                 }
             }
-        }, 60 * 60 * 1000); // 1 hora
+        }, 60 * 60 * 1000);
         
-        // Enviar el nuevo mensaje
+        console.log('Enviando mensaje de bienvenida');
         await message.author.send(mensajes.ArranqueRegistro);
+        console.log('Mensaje de bienvenida enviado');
         
-        // Si el DM funcionó, responder en el canal
-        await message.reply(mensajes.LlamadoRegistro(message.author));
+        // Solo responder en el canal si NO es un DM
+        if (!esEnDM) {
+            console.log('Respondiendo en el canal');
+            await message.reply(mensajes.LlamadoRegistro(message.author));
+        } else {
+            console.log('Es DM, no se responde en canal');
+        }
     } catch (error) {
-        // Si no se pudo enviar DM, avisar
-        await message.reply(mensajes.FalloLlamadoRegistro(message.author));
+        console.error('Error en ejecutar:', error);
+        // Solo intentar responder si no es un DM
+        if (!esEnDM) {
+            await message.reply(mensajes.FalloLlamadoRegistro(message.author));
+        }
     }
 }
 
@@ -335,24 +331,20 @@ async function procesarRespuestaDM(message) {
     const userId = message.author.id;
     const estadoUsuario = usuariosEnRegistro.get(userId);
     
-    // Si el usuario no está en proceso de registro, ignorar
     if (!estadoUsuario) return;
     
-    // Comando secreto para probar timeout (solo para testing)
     if (message.content === 'Aurora!RTO') {
         usuariosEnRegistro.delete(userId);
         await message.reply(mensajes.TimeOutRegistro());
         return;
     }
     
-    // Verificar si el usuario quiere cancelar
     if (message.content.toLowerCase() === 'aurora!cancelar') {
         usuariosEnRegistro.delete(userId);
         await message.reply(mensajes.FinRegistro());
         return;
     }
     
-    // Procesar según la etapa
     if (estadoUsuario.etapa === 'riotid') {
         await validarRiotID(message, estadoUsuario);
     } else if (estadoUsuario.etapa === 'region') {
@@ -363,7 +355,6 @@ async function procesarRespuestaDM(message) {
 async function validarRiotID(message, estadoUsuario) {
     const riotID = message.content.trim();
     
-    // Validar formato: debe tener # y texto antes y después
     if (!riotID.includes('#')) {
         await message.reply(mensajes.TAGIncorrectoRegistro);
         return;
@@ -376,7 +367,6 @@ async function validarRiotID(message, estadoUsuario) {
         return;
     }
     
-    // Si la validación pasó, guardar y pedir región
     estadoUsuario.riotID = riotID;
     estadoUsuario.etapa = 'region';
     usuariosEnRegistro.set(message.author.id, estadoUsuario);
@@ -388,27 +378,20 @@ async function validarRegion(message, estadoUsuario) {
     const region = message.content.trim().toUpperCase();
     const regionesValidas = ['LAN', 'LAS', 'NA', 'BR'];
     
-    // Validar que la región sea válida
     if (!regionesValidas.includes(region)) {
         await message.reply(mensajes.RegionInvalidaRegistro);
         return;
     }
     
-    // Guardar región temporalmente
     estadoUsuario.region = region;
     
-    // Separar el Riot ID en gameName y tagLine
     const [gameName, tagLine] = estadoUsuario.riotID.split('#');
-    
-    // Verificar cuenta en Riot API
     const resultado = await verificarCuentaRiot(gameName, tagLine, region);
     
     if (resultado.existe) {
-        // Cuenta encontrada - obtener información adicional
         const plataforma = regionAPlatforma[region];
         const puuid = resultado.data.puuid;
         
-        // Obtener datos del summoner
         const summoner = await obtenerSummoner(puuid, plataforma);
         
         if (!summoner) {
@@ -416,25 +399,18 @@ async function validarRegion(message, estadoUsuario) {
             return;
         }
         
-        // Obtener rangos
         const rangos = await obtenerRangos(puuid, plataforma);
-        
-        // Obtener campeones favoritos
         const campeonesFavoritos = await obtenerCampeonesFavoritos(puuid, plataforma);
-        
-        // Obtener últimas 3 partidas
         const ultimasPartidas = await obtenerUltimasPartidas(puuid, plataforma);
         
-        // Guardar datos completos en el estado (NO eliminar hasta confirmar)
         estadoUsuario.etapa = 'confirmacion';
         estadoUsuario.riotID = `${resultado.data.gameName}#${resultado.data.tagLine}`;
         estadoUsuario.region = region;
         estadoUsuario.puuid = puuid;
         usuariosEnRegistro.set(message.author.id, estadoUsuario);
         
-        // Preparar datos para el embed
         const datosJugador = {
-            riotID: `${resultado.data.gameName}#${resultado.data.tagLine}`, // Usar el formato correcto de la API
+            riotID: `${resultado.data.gameName}#${resultado.data.tagLine}`,
             region: region,
             iconoId: summoner.profileIconId,
             rangos: rangos,
@@ -442,19 +418,19 @@ async function validarRegion(message, estadoUsuario) {
             ultimasPartidas: ultimasPartidas
         };
         
-        // Crear y enviar embed (await porque ahora es async)
         const embed = await crearEmbedPerfil(datosJugador);
         
-        // Crear botones
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('confirmar_cuenta')
-                    .setLabel('✓ Confirmar')
+                    .setLabel('Registrar Cuenta')
+                    .setEmoji('1465263781348118564')
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
                     .setCustomId('reintentar_cuenta')
-                    .setLabel('↻ Comenzar de nuevo')
+                    .setLabel('Volver a Comenzar')
+                    .setEmoji('1465219188561023124')
                     .setStyle(ButtonStyle.Secondary)
             );
         
@@ -464,14 +440,12 @@ async function validarRegion(message, estadoUsuario) {
             components: [row]
         });
     } else {
-        // Cuenta no encontrada - volver a pedir Riot ID
         estadoUsuario.etapa = 'riotid';
         usuariosEnRegistro.set(message.author.id, estadoUsuario);
         await message.reply(mensajes.CuentaNoEncontradaRegistro);
     }
 }
 
-// Función de test para saltar directo al embed
 async function testEmbed(message) {
     const gameName = 'cachorracachonda';
     const tagLine = 'juzo';
@@ -481,7 +455,6 @@ async function testEmbed(message) {
     await message.reply('Generando embed de prueba...');
     
     try {
-        // Verificar cuenta
         const resultado = await verificarCuentaRiot(gameName, tagLine, region);
         
         if (!resultado.existe) {
@@ -490,8 +463,6 @@ async function testEmbed(message) {
         }
         
         const puuid = resultado.data.puuid;
-        
-        // Obtener datos del summoner
         const summoner = await obtenerSummoner(puuid, plataforma);
         
         if (!summoner) {
@@ -499,16 +470,23 @@ async function testEmbed(message) {
             return;
         }
         
-        // Obtener rangos
-        const rangos = await obtenerRangos(puuid, plataforma);
+        const rangos = {
+            soloq: {
+                tier: 'CHALLENGER',
+                rank: 'I',
+                lp: 1000
+            },
+            flex: {
+                tier: 'DIAMOND',
+                rank: 'III',
+                lp: 45
+            },
+            tft: null
+        };
         
-        // Obtener campeones favoritos
         const campeonesFavoritos = await obtenerCampeonesFavoritos(puuid, plataforma);
-        
-        // Obtener últimas 3 partidas
         const ultimasPartidas = await obtenerUltimasPartidas(puuid, plataforma);
         
-        // Preparar datos para el embed
         const datosJugador = {
             riotID: `${gameName}#${tagLine}`,
             region: region,
@@ -518,7 +496,6 @@ async function testEmbed(message) {
             ultimasPartidas: ultimasPartidas
         };
         
-        // Crear y enviar embed
         const embed = await crearEmbedPerfil(datosJugador);
         await message.channel.send({ 
             content: 'Revisé mis archivos mágicos con la información que me diste. <:AuroraTea:1465551396848930901>\nEncontré esta cuenta… ¿Es la que quieres registrar?\nConfirma con los botones de abajo o dime y empezamos otra vez.',
@@ -530,7 +507,6 @@ async function testEmbed(message) {
     }
 }
 
-// Función para manejar los botones de confirmación
 async function manejarBotonConfirmacion(interaction) {
     const userId = interaction.user.id;
     const estadoUsuario = usuariosEnRegistro.get(userId);
@@ -539,7 +515,6 @@ async function manejarBotonConfirmacion(interaction) {
     console.log('Estado usuario:', estadoUsuario);
     console.log('Usuarios en registro:', usuariosEnRegistro);
     
-    // Si el usuario no está en proceso de registro, ignorar
     if (!estadoUsuario) {
         await interaction.reply({ 
             content: 'No tienes un registro en proceso. Usa `Aurora!registro` para comenzar.',
@@ -549,23 +524,23 @@ async function manejarBotonConfirmacion(interaction) {
     }
     
     if (interaction.customId === 'confirmar_cuenta') {
-        // Confirmar registro
         const riotID = estadoUsuario.riotID;
         const region = estadoUsuario.region;
         
         usuariosEnRegistro.delete(userId);
         
-        // Deshabilitar botones (mantenerlos pero deshabilitados)
         const rowDisabled = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('confirmar_cuenta_disabled')
-                    .setLabel('✓ Confirmar')
+                    .setLabel('Registrar Cuenta')
+                    .setEmoji('1465263781348118564')
                     .setStyle(ButtonStyle.Success)
                     .setDisabled(true),
                 new ButtonBuilder()
                     .setCustomId('reintentar_cuenta_disabled')
-                    .setLabel('↻ Comenzar de nuevo')
+                    .setLabel('Volver a Comenzar')
+                    .setEmoji('1465219188561023124')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(true)
             );
@@ -574,27 +549,24 @@ async function manejarBotonConfirmacion(interaction) {
             components: [rowDisabled]
         });
         
-        // Enviar mensaje de confirmación en el canal
         await interaction.channel.send(mensajes.CompletoRegistro(riotID, region));
         
-        // Aquí puedes agregar la lógica para guardar en base de datos
-        
     } else if (interaction.customId === 'reintentar_cuenta') {
-        // Reiniciar registro - volver a pedir Riot ID
         estadoUsuario.etapa = 'riotid';
         usuariosEnRegistro.set(userId, estadoUsuario);
         
-        // Deshabilitar botones (el de reintentar en rojo, el otro en gris)
         const rowDisabled = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('confirmar_cuenta_disabled')
-                    .setLabel('✓ Confirmar')
+                    .setLabel('Registrar Cuenta')
+                    .setEmoji('1465263781348118564')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(true),
                 new ButtonBuilder()
                     .setCustomId('reintentar_cuenta_disabled')
-                    .setLabel('↻ Comenzar de nuevo')
+                    .setLabel('Volver a Comenzar')
+                    .setEmoji('1465219188561023124')
                     .setStyle(ButtonStyle.Danger)
                     .setDisabled(true)
             );
@@ -603,7 +575,6 @@ async function manejarBotonConfirmacion(interaction) {
             components: [rowDisabled]
         });
         
-        // Enviar mensaje para comenzar de nuevo
         await interaction.channel.send(mensajes.ComenzarDeNuevoRegistro);
     }
 }

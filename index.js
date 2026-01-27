@@ -14,7 +14,7 @@ const client = new Client({
 });
 
 // Cuando el bot esté listo
-client.on('ready', () => {
+client.on('clientReady', () => {
     console.log(`${client.user.tag} se ha encendido correctamente.`);
 });
 
@@ -38,20 +38,6 @@ client.on('messageCreate', async (message) => {
     const content = message.content;
     if (content.toLowerCase().startsWith('aurora!registro')) {
         await registroCommand.ejecutar(message);
-    }
-    
-    // Detectar comando Aurora!test
-    if (content.toLowerCase().startsWith('aurora!test')) {
-        await registroCommand.testEmbed(message);
-    }
-});
-
-// Manejar interacciones de botones
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
-    
-    if (interaction.customId === 'confirmar_cuenta' || interaction.customId === 'reintentar_cuenta') {
-        await registroCommand.manejarBotonConfirmacion(interaction);
     }
 });
 

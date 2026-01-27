@@ -35,7 +35,11 @@ async function crearEmbedPerfil(datosJugador) {
     // Solo/Duo
     if (rangos.soloq) {
         const emojis = obtenerEmojisRango(rangos.soloq.tier, rangos.soloq.rank);
-        clasificacionTexto += `**Solo/Duo**⠀${emojis.combined} ${rangos.soloq.lp} Puntos de Liga\n`;
+        if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rangos.soloq.tier)) {
+            clasificacionTexto += `**Solo/Duo**⠀${emojis.combined} ⠀ ⠀${rangos.soloq.lp} Puntos de Liga\n`;
+        } else {
+            clasificacionTexto += `**Solo/Duo**⠀${emojis.combined} ${rangos.soloq.lp} Puntos de Liga\n`;
+        }
     } else {
         const emojis = obtenerEmojisRango('UNRANKED');
         clasificacionTexto += `**Solo/Duo**⠀${emojis.combined} ⠀ ⠀Sin Clasificación\n`;
@@ -44,7 +48,11 @@ async function crearEmbedPerfil(datosJugador) {
     // Flexible
     if (rangos.flex) {
         const emojis = obtenerEmojisRango(rangos.flex.tier, rangos.flex.rank);
-        clasificacionTexto += `**Flexible**⠀⠀${emojis.combined} ${rangos.flex.lp} Puntos de Liga\n`;
+        if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rangos.flex.tier)) {
+            clasificacionTexto += `**Flexible**⠀⠀${emojis.combined} ⠀ ⠀${rangos.flex.lp} Puntos de Liga\n`;
+        } else {
+            clasificacionTexto += `**Flexible**⠀⠀${emojis.combined} ${rangos.flex.lp} Puntos de Liga\n`;
+        }
     } else {
         const emojis = obtenerEmojisRango('UNRANKED');
         clasificacionTexto += `**Flexible**⠀⠀${emojis.combined} ⠀ ⠀Sin Clasificación\n`;
@@ -53,7 +61,11 @@ async function crearEmbedPerfil(datosJugador) {
     // TFT (si existe)
     if (rangos.tft) {
         const emojis = obtenerEmojisRango(rangos.tft.tier, rangos.tft.rank);
-        clasificacionTexto += `**TFT**            ${emojis.combined} ${rangos.tft.lp} Puntos de Liga`;
+        if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rangos.tft.tier)) {
+            clasificacionTexto += `**TFT**            ${emojis.combined} ⠀ ⠀${rangos.tft.lp} Puntos de Liga`;
+        } else {
+            clasificacionTexto += `**TFT**            ${emojis.combined} ${rangos.tft.lp} Puntos de Liga`;
+        }
     } else {
         const emojis = obtenerEmojisRango('UNRANKED');
         clasificacionTexto += `**TFT**⠀ ⠀ ⠀⠀${emojis.combined} ⠀ ⠀Sin Clasificación`;
@@ -77,6 +89,7 @@ async function crearEmbedPerfil(datosJugador) {
     
     // Crear el embed
     const embed = new EmbedBuilder()
+        .setColor('#fe9075')
         .setAuthor({
             name: `Perfil de ${riotID}`,
             iconURL: 'https://cdn.discordapp.com/emojis/1263996583112872017.webp?size=40'
@@ -99,10 +112,9 @@ async function crearEmbedPerfil(datosJugador) {
                 inline: true
             }
         )
-        .setImage('https://i.imgur.com/VCJH8Wc.png');
+        .setImage();
     
     return embed;
 }
 
 module.exports = { crearEmbedPerfil };
-
