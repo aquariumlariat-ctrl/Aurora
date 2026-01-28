@@ -107,4 +107,11 @@ Para continuar, envía tu **Riot ID** en el siguiente formato: \`NombreDeInvocad
 **Región:** ${region}
 
 Ya puedes comenzar a usar todas mis funciones. ¡Que tengas buenas partidas! <:Aurora_Comfy:1463652023747743880>`,
+
+    // Sin registro en proceso
+    SinRegistroEnProceso: `No tienes un registro en proceso. Usa \`Aurora!registro\` para comenzar <:AuroraPout:1465262072932728939>.`,
+    
+    // Error al obtener summoner
+    ErrorSummonerRegistro: `Hubo un problema al obtener la información de tu cuenta. <:AuroraPout:1465262072932728939>
+Por favor, intenta nuevamente más tarde.`,
 };

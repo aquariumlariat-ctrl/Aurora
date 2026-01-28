@@ -3,6 +3,7 @@ const mensajes = require('./mensajes');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { estaVetado, registrarCancelacion, registrarTimeout } = require('./cancelaciones');
 const { validarRiotID, validarRegion } = require('./validaciones');
+const { guardarRegistro } = require('./googleSheets');
 
 // Guardar el estado de cada usuario en proceso de registro
 const usuariosEnRegistro = new Map();
@@ -62,9 +63,39 @@ async function ejecutar(message) {
             tiempoInicio: tiempoInicio
         });
         
+        const client = message.client;
+        
         setTimeout(async () => {
             const estadoActual = usuariosEnRegistro.get(message.author.id);
             if (estadoActual && estadoActual.tiempoInicio === tiempoInicio) {
+                // Deshabilitar botones si existen
+                if (estadoActual.messageId && estadoActual.channelId) {
+                    try {
+                        const channel = await client.channels.fetch(estadoActual.channelId);
+                        const msg = await channel.messages.fetch(estadoActual.messageId);
+                        
+                        const rowDisabled = new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId('confirmar_cuenta_disabled')
+                                    .setLabel('Registrar Cuenta')
+                                    .setEmoji('1465263781348118564')
+                                    .setStyle(ButtonStyle.Secondary)
+                                    .setDisabled(true),
+                                new ButtonBuilder()
+                                    .setCustomId('reintentar_cuenta_disabled')
+                                    .setLabel('Volver a Comenzar')
+                                    .setEmoji('1465219188561023124')
+                                    .setStyle(ButtonStyle.Secondary)
+                                    .setDisabled(true)
+                            );
+                        
+                        await msg.edit({ components: [rowDisabled] });
+                    } catch (error) {
+                        console.error('Error al deshabilitar botones:', error);
+                    }
+                }
+                
                 usuariosEnRegistro.delete(message.author.id);
                 
                 // Registrar timeout
@@ -106,6 +137,34 @@ async function procesarRespuestaDM(message) {
     if (!estadoUsuario) return;
     
     if (message.content === 'Aurora!RTO') {
+        // Deshabilitar botones si existen
+        if (estadoUsuario.messageId && estadoUsuario.channelId) {
+            try {
+                const channel = await message.client.channels.fetch(estadoUsuario.channelId);
+                const msg = await channel.messages.fetch(estadoUsuario.messageId);
+                
+                const rowDisabled = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('confirmar_cuenta_disabled')
+                            .setLabel('Registrar Cuenta')
+                            .setEmoji('1465263781348118564')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(true),
+                        new ButtonBuilder()
+                            .setCustomId('reintentar_cuenta_disabled')
+                            .setLabel('Volver a Comenzar')
+                            .setEmoji('1465219188561023124')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(true)
+                    );
+                
+                await msg.edit({ components: [rowDisabled] });
+            } catch (error) {
+                console.error('Error al deshabilitar botones:', error);
+            }
+        }
+        
         usuariosEnRegistro.delete(userId);
         
         // Registrar timeout
@@ -123,6 +182,34 @@ async function procesarRespuestaDM(message) {
     }
     
     if (message.content.toLowerCase() === 'aurora!cancelar') {
+        // Deshabilitar botones si existen
+        if (estadoUsuario.messageId && estadoUsuario.channelId) {
+            try {
+                const channel = await message.client.channels.fetch(estadoUsuario.channelId);
+                const msg = await channel.messages.fetch(estadoUsuario.messageId);
+                
+                const rowDisabled = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('confirmar_cuenta_disabled')
+                            .setLabel('Registrar Cuenta')
+                            .setEmoji('1465263781348118564')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(true),
+                        new ButtonBuilder()
+                            .setCustomId('reintentar_cuenta_disabled')
+                            .setLabel('Volver a Comenzar')
+                            .setEmoji('1465219188561023124')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(true)
+                    );
+                
+                await msg.edit({ components: [rowDisabled] });
+            } catch (error) {
+                console.error('Error al deshabilitar botones:', error);
+            }
+        }
+        
         usuariosEnRegistro.delete(userId);
         
         // Registrar cancelación
@@ -216,7 +303,7 @@ async function manejarBotonConfirmacion(interaction) {
     
     if (!estadoUsuario) {
         await interaction.reply({ 
-            content: 'No tienes un registro en proceso. Usa `Aurora!registro` para comenzar.',
+            content: mensajes.SinRegistroEnProceso,
             ephemeral: true 
         });
         return;
@@ -225,6 +312,20 @@ async function manejarBotonConfirmacion(interaction) {
     if (interaction.customId === 'confirmar_cuenta') {
         const riotID = estadoUsuario.riotID;
         const region = estadoUsuario.region;
+        const puuid = estadoUsuario.puuid;
+        const rangos = estadoUsuario.rangos;
+        
+        // Guardar en Google Sheets
+        const datosParaGuardar = {
+            discordId: userId,
+            discordUsername: interaction.user.username,
+            riotID: riotID,
+            region: region,
+            rangos: rangos,
+            puuid: puuid
+        };
+        
+        const guardado = await guardarRegistro(datosParaGuardar);
         
         usuariosEnRegistro.delete(userId);
         

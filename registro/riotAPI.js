@@ -55,7 +55,7 @@ async function verificarCuentaRiot(gameName, tagLine, region) {
     }
 }
 
-// Función para obtener información del summoner
+// Función para obtener información del summoner (LoL)
 async function obtenerSummoner(puuid, plataforma) {
     const url = `https://${plataforma}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
     
@@ -68,16 +68,46 @@ async function obtenerSummoner(puuid, plataforma) {
         
         if (response.status === 200) {
             const data = await response.json();
+            console.log('Datos del summoner LoL completos:', data);
             return data;
         }
         return null;
     } catch (error) {
-        console.error('Error al obtener summoner:', error);
+        console.error('Error al obtener summoner LoL:', error);
         return null;
     }
 }
 
-// Función para obtener rangos del jugador
+// Función para obtener Summoner ID de TFT (necesario para obtener rango TFT)
+async function obtenerSummonerTFT(puuid, plataforma) {
+    const url = `https://${plataforma}.api.riotgames.com/tft/summoner/v1/summoners/by-puuid/${puuid}`;
+    
+    console.log('Obteniendo Summoner TFT - PUUID:', puuid);
+    console.log('Obteniendo Summoner TFT - Plataforma:', plataforma);
+    console.log('Obteniendo Summoner TFT - URL:', url);
+    
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'X-Riot-Token': process.env.RIOT_API_KEY
+            }
+        });
+        
+        console.log('Status de respuesta Summoner TFT:', response.status);
+        
+        if (response.status === 200) {
+            const data = await response.json();
+            console.log('Datos del summoner TFT completos:', data);
+            return data;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error al obtener summoner TFT:', error);
+        return null;
+    }
+}
+
+// Función para obtener rangos del jugador (LoL)
 async function obtenerRangos(puuid, plataforma) {
     const url = `https://${plataforma}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
     
@@ -117,6 +147,50 @@ async function obtenerRangos(puuid, plataforma) {
     } catch (error) {
         console.error('Error al obtener rangos:', error);
         return { soloq: null, flex: null };
+    }
+}
+
+// Función para obtener rango de TFT
+async function obtenerRangoTFT(summonerId, plataforma) {
+    const url = `https://${plataforma}.api.riotgames.com/tft/league/v1/entries/by-summoner/${summonerId}`;
+    
+    console.log('Obteniendo rango TFT - Summoner ID:', summonerId);
+    console.log('Obteniendo rango TFT - Plataforma:', plataforma);
+    console.log('Obteniendo rango TFT - URL:', url);
+    
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'X-Riot-Token': process.env.RIOT_API_KEY
+            }
+        });
+        
+        console.log('Status de respuesta TFT:', response.status);
+        
+        if (response.status === 200) {
+            const data = await response.json();
+            console.log('Datos TFT:', data);
+            
+            // TFT solo tiene un tipo de ranked
+            if (data && data.length > 0) {
+                const tftData = data[0];
+                console.log('Rango TFT encontrado:', tftData);
+                return {
+                    tier: tftData.tier,
+                    rank: tftData.rank,
+                    lp: tftData.leaguePoints
+                };
+            }
+            
+            console.log('Sin datos de TFT (array vacío)');
+            return null;
+        }
+        
+        console.log('Status code no 200, retornando null');
+        return null;
+    } catch (error) {
+        console.error('Error al obtener rango TFT:', error);
+        return null;
     }
 }
 
@@ -236,7 +310,9 @@ module.exports = {
     regionAPlatforma,
     verificarCuentaRiot,
     obtenerSummoner,
+    obtenerSummonerTFT,
     obtenerRangos,
+    obtenerRangoTFT,
     obtenerCampeonesFavoritos,
     obtenerUltimasPartidas
 };

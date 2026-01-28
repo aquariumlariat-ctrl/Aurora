@@ -5,8 +5,10 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { 
     regionAPlatforma, 
     verificarCuentaRiot, 
-    obtenerSummoner, 
-    obtenerRangos, 
+    obtenerSummoner,
+    obtenerSummonerTFT,
+    obtenerRangos,
+    obtenerRangoTFT,
     obtenerCampeonesFavoritos, 
     obtenerUltimasPartidas 
 } = require('./riotAPI');
@@ -56,11 +58,21 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
         const summoner = await obtenerSummoner(puuid, plataforma);
         
         if (!summoner) {
-            await message.reply('Error al obtener información del summoner.');
+            await message.reply(mensajes.ErrorSummonerRegistro);
             return;
         }
         
+        // Obtener summoner de TFT para conseguir el ID
+        const summonerTFT = await obtenerSummonerTFT(puuid, plataforma);
+        
         const rangos = await obtenerRangos(puuid, plataforma);
+        
+        // Usar el ID del summoner TFT para obtener el rango
+        let rangoTFT = null;
+        if (summonerTFT && summonerTFT.id) {
+            rangoTFT = await obtenerRangoTFT(summonerTFT.id, plataforma);
+        }
+        
         const campeonesFavoritos = await obtenerCampeonesFavoritos(puuid, plataforma);
         const ultimasPartidas = await obtenerUltimasPartidas(puuid, plataforma);
         
@@ -68,13 +80,21 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
         estadoUsuario.riotID = `${resultado.data.gameName}#${resultado.data.tagLine}`;
         estadoUsuario.region = region;
         estadoUsuario.puuid = puuid;
-        usuariosEnRegistro.set(message.author.id, estadoUsuario);
+        estadoUsuario.rangos = {
+            soloq: rangos.soloq,
+            flex: rangos.flex,
+            tft: rangoTFT
+        };
         
         const datosJugador = {
             riotID: `${resultado.data.gameName}#${resultado.data.tagLine}`,
             region: region,
             iconoId: summoner.profileIconId,
-            rangos: rangos,
+            rangos: {
+                soloq: rangos.soloq,
+                flex: rangos.flex,
+                tft: rangoTFT
+            },
             campeonesFavoritos: campeonesFavoritos,
             ultimasPartidas: ultimasPartidas
         };
@@ -95,11 +115,16 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
                     .setStyle(ButtonStyle.Secondary)
             );
         
-        await message.reply({ 
+        const reply = await message.reply({ 
             content: 'Revisé mis archivos mágicos con la información que me diste. <:AuroraTea:1465551396848930901>\nEncontré esta cuenta… ¿Es la que quieres registrar?\nConfirma con los botones de abajo o dime y empezamos otra vez.',
             embeds: [embed],
             components: [row]
         });
+        
+        // Guardar el ID del mensaje y canal para poder deshabilitar los botones después
+        estadoUsuario.messageId = reply.id;
+        estadoUsuario.channelId = reply.channel.id;
+        usuariosEnRegistro.set(message.author.id, estadoUsuario);
     } else {
         estadoUsuario.etapa = 'riotid';
         usuariosEnRegistro.set(message.author.id, estadoUsuario);
