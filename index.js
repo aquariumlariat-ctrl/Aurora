@@ -1,5 +1,5 @@
 // index.js
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 require('dotenv').config();
 const registroCommand = require('./registro/registro');
 
@@ -10,11 +10,12 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
-    ]
+    ],
+    partials: [Partials.Channel]
 });
 
 // Cuando el bot esté listo
-client.on('clientReady', () => {
+client.on('ready', () => {
     console.log(`${client.user.tag} se ha encendido correctamente.`);
 });
 
@@ -23,9 +24,35 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes del propio bot
     if (message.author.bot) return;
     
-    // Si es un DM (mensaje directo)
+    console.log('Mensaje recibido:', message.content, 'Canal:', message.channel.type);
+    
+    const content = message.content;
+    
+    // Detectar comando Aurora!test
+    if (content.toLowerCase().startsWith('aurora!test')) {
+        await registroCommand.testEmbed(message);
+        return;
+    }
+    
+    // Si es un DM, procesar según el contexto
     if (message.channel.isDMBased()) {
+        // Si hay registro en proceso, tratar Aurora!registro como respuesta normal
+        const tieneRegistro = registroCommand.tieneRegistroEnProceso(message.author.id);
+        
+        if (content.toLowerCase().startsWith('aurora!registro') && !tieneRegistro) {
+            // Solo iniciar registro si NO hay uno en proceso
+            await registroCommand.ejecutar(message);
+            return;
+        }
+        
+        // Procesar respuesta del registro (incluye Aurora!registro si ya hay proceso)
         await registroCommand.procesarRespuestaDM(message);
+        return;
+    }
+    
+    // Detectar comando Aurora!registro en canal
+    if (content.toLowerCase().startsWith('aurora!registro')) {
+        await registroCommand.ejecutar(message);
         return;
     }
     
@@ -33,11 +60,14 @@ client.on('messageCreate', async (message) => {
     if (message.content === 'ping') {
         message.reply('pong!');
     }
+});
 
-    // Detectar comando Aurora!registro (case insensitive para la A)
-    const content = message.content;
-    if (content.toLowerCase().startsWith('aurora!registro')) {
-        await registroCommand.ejecutar(message);
+// Manejar interacciones de botones
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+    
+    if (interaction.customId === 'confirmar_cuenta' || interaction.customId === 'reintentar_cuenta') {
+        await registroCommand.manejarBotonConfirmacion(interaction);
     }
 });
 

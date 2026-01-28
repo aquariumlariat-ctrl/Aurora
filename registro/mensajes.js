@@ -6,6 +6,11 @@ module.exports = {
 Vamos a comenzar con el registro de tu Riot ID.
 Te he enviado un mensaje privado con los pasos a seguir.`,
     
+    // Usuario ya tiene un registro en proceso (solo en servidor)
+    UsuarioEnRegistro: (usuario) => `¡Hola ${usuario}! <:AuroraHiiiiii:1465210040989388810>
+Ya tienes un proceso de registro abierto.
+Revisa tus mensajes privados para continuar con él.`,
+    
     // Error de DM
     FalloLlamadoRegistro: (usuario) => `¡Hola ${usuario}! Encantada de conocerte. <:AuroraHiiiiii:1465210040989388810>
 He intentado comenzar con el registro de tu Riot ID, pero no pude enviarte un mensaje privado. 
@@ -21,15 +26,25 @@ El registro permanecerá abierto durante 1 hora; pasado ese tiempo se cancelará
 Para continuar, envía tu **Riot ID** en el siguiente formato: \`NombreDeInvocador#TAG\`.`,
     
     FinRegistro: () => {
-        const tiempoEspera = Math.floor((Date.now() + 30 * 60 * 1000) / 1000);
         return `Has cancelado el proceso de registro. <:AuroraBonk:1465219188561023124> 
+Puedes iniciar uno nuevo en cualquier momento.
+Cuando quieras volver a intentarlo, estaré aquí.`;
+    },
+    
+    VetoPorCancelacionRegistro: (tiempoEspera) => {
+        return `Has cancelado muchas veces el proceso de registro. <:AuroraBonk:1465219188561023124> 
 Podrás volver a intentarlo <t:${tiempoEspera}:R>.
 Cuando quieras volver a intentarlo, estaré aquí para ti.`;
     },
     
     TimeOutRegistro: () => {
-        const tiempoEspera = Math.floor((Date.now() + 30 * 60 * 1000) / 1000);
-        return `Se ha acabado el tiempo de registro. <:AuroraDead:1465242238794862686> 
+        return `Se ha acabado el tiempo de registro. <:AuroraDead:1465242238794862686>
+Puedes iniciar uno nuevo en cualquier momento.
+Cuando quieras volver a intentarlo, estaré aquí.`;
+    },
+    
+    VetoPorTimeOutsRegistro: (tiempoEspera) => {
+        return `El tiempo para completar el registro se ha agotado en múltiples ocasiones. <:AuroraDead:1465242238794862686>
 Podrás volver a intentarlo <t:${tiempoEspera}:R>.
 Cuando quieras volver a intentarlo, estaré aquí para ti.`;
     },
@@ -70,8 +85,8 @@ Para continuar, envía tu **Riot ID** en el siguiente formato: \`NombreDeInvocad
     // Registro completado
     CompletoRegistro: (riotID, region) => `¡Registro completado con éxito! <:AuroraClap:1465217066813493386>
 
-**Riot ID:** ${riotID}.
-**Región:** ${region}.
+**Riot ID:** ${riotID}
+**Región:** ${region}
 
 Ya puedes comenzar a usar mis funciones.
 ¡Te deseo geniales partidas, nos vemos en la Grieta!`,
@@ -88,8 +103,8 @@ Para continuar, envía tu **Riot ID** en el siguiente formato: \`NombreDeInvocad
     // Registro completado (deprecated - ahora usa CuentaEncontrada)
     registroCompletado: (riotID, region) => `✅ ¡Registro completado exitosamente!
     
-**Riot ID:** ${riotID}.
-**Región:** ${region}.
+**Riot ID:** ${riotID}
+**Región:** ${region}
 
 Ya puedes comenzar a usar todas mis funciones. ¡Que tengas buenas partidas! <:Aurora_Comfy:1463652023747743880>`,
 };
