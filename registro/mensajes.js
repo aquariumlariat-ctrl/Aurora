@@ -109,9 +109,17 @@ Para continuar, envía tu **Riot ID** en el siguiente formato: \`NombreDeInvocad
 Ya puedes comenzar a usar todas mis funciones. ¡Que tengas buenas partidas! <:Aurora_Comfy:1463652023747743880>`,
 
     // Sin registro en proceso
-    SinRegistroEnProceso: `No tienes un registro en proceso. Usa \`Aurora!registro\` para comenzar <:AuroraPout:1465262072932728939>.`,
+    SinRegistroEnProceso: `No tienes un registro en proceso. Usa \`Aurora!registro\` para comenzar. <:AuroraPout:1465262072932728939>`,
     
     // Error al obtener summoner
     ErrorSummonerRegistro: `Hubo un problema al obtener la información de tu cuenta. <:AuroraPout:1465262072932728939>
 Por favor, intenta nuevamente más tarde.`,
+    
+    // Cargando embed de registro
+    CargandoEmbedRegistro: `Estoy buscando tu cuenta, dame un momento por favor. <a:AuroraLoading:1466251290576290049>`,
+    
+    // Usuario ya tiene registro completado
+    UsuarioYaConRegistro: (usuario) => `¡Hola ${usuario}! <:AuroraHiiiiii:1465210040989388810>
+Ya tienes una cuenta registrada.
+Consulta tu perfil con \`Aurora!perfil\`.`,
 };

@@ -68,7 +68,6 @@ async function obtenerSummoner(puuid, plataforma) {
         
         if (response.status === 200) {
             const data = await response.json();
-            console.log('Datos del summoner LoL completos:', data);
             return data;
         }
         return null;
@@ -82,9 +81,6 @@ async function obtenerSummoner(puuid, plataforma) {
 async function obtenerSummonerTFT(puuid, plataforma) {
     const url = `https://${plataforma}.api.riotgames.com/tft/summoner/v1/summoners/by-puuid/${puuid}`;
     
-    console.log('Obteniendo Summoner TFT - PUUID:', puuid);
-    console.log('Obteniendo Summoner TFT - Plataforma:', plataforma);
-    console.log('Obteniendo Summoner TFT - URL:', url);
     
     try {
         const response = await fetch(url, {
@@ -93,11 +89,9 @@ async function obtenerSummonerTFT(puuid, plataforma) {
             }
         });
         
-        console.log('Status de respuesta Summoner TFT:', response.status);
         
         if (response.status === 200) {
             const data = await response.json();
-            console.log('Datos del summoner TFT completos:', data);
             return data;
         }
         return null;
@@ -154,9 +148,6 @@ async function obtenerRangos(puuid, plataforma) {
 async function obtenerRangoTFT(summonerId, plataforma) {
     const url = `https://${plataforma}.api.riotgames.com/tft/league/v1/entries/by-summoner/${summonerId}`;
     
-    console.log('Obteniendo rango TFT - Summoner ID:', summonerId);
-    console.log('Obteniendo rango TFT - Plataforma:', plataforma);
-    console.log('Obteniendo rango TFT - URL:', url);
     
     try {
         const response = await fetch(url, {
@@ -165,16 +156,13 @@ async function obtenerRangoTFT(summonerId, plataforma) {
             }
         });
         
-        console.log('Status de respuesta TFT:', response.status);
         
         if (response.status === 200) {
             const data = await response.json();
-            console.log('Datos TFT:', data);
             
             // TFT solo tiene un tipo de ranked
             if (data && data.length > 0) {
                 const tftData = data[0];
-                console.log('Rango TFT encontrado:', tftData);
                 return {
                     tier: tftData.tier,
                     rank: tftData.rank,
@@ -182,11 +170,9 @@ async function obtenerRangoTFT(summonerId, plataforma) {
                 };
             }
             
-            console.log('Sin datos de TFT (array vacío)');
             return null;
         }
         
-        console.log('Status code no 200, retornando null');
         return null;
     } catch (error) {
         console.error('Error al obtener rango TFT:', error);

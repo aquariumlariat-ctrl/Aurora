@@ -1,17 +1,66 @@
 // registro/registro.js
 const mensajes = require('./mensajes');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { estaVetado, registrarCancelacion, registrarTimeout } = require('./cancelaciones');
+const { estaVetado, registrarCancelacion, registrarTimeout } = require('./vetos');
 const { validarRiotID, validarRegion } = require('./validaciones');
-const { guardarRegistro } = require('./googleSheets');
+const { guardarRegistro, cargarUsuariosDesdeSheet } = require('./google_sheets');
+const fs = require('fs').promises;
+const path = require('path');
 
 // Guardar el estado de cada usuario en proceso de registro
 const usuariosEnRegistro = new Map();
 
+// Cache de usuarios registrados (en memoria)
+let usuariosRegistrados = new Set();
+
+// Archivo JSON para persistencia
+const CACHE_FILE = path.join(__dirname, 'registrados.json');
+
+// Cargar usuarios al iniciar
+async function inicializarCache() {
+    try {
+        // Cargar desde Google Sheets
+        console.log('🔄 Cargando usuarios registrados desde Google Sheets...');
+        const idsDesdeSheet = await cargarUsuariosDesdeSheet();
+        
+        // Guardar/actualizar JSON
+        await fs.writeFile(CACHE_FILE, JSON.stringify(idsDesdeSheet, null, 2));
+        
+        // Cargar en RAM
+        usuariosRegistrados = new Set(idsDesdeSheet);
+        
+        console.log(`✅ ${usuariosRegistrados.size} usuarios registrados cargados`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error al inicializar cache:', error);
+        
+        // Intentar cargar desde JSON como fallback
+        try {
+            const data = await fs.readFile(CACHE_FILE, 'utf8');
+            usuariosRegistrados = new Set(JSON.parse(data));
+            console.log(`⚠️ Cargado desde cache local (${usuariosRegistrados.size} usuarios)`);
+            return true;
+        } catch {
+            console.log('⚠️ No se pudo cargar cache, iniciando vacío');
+            usuariosRegistrados = new Set();
+            return false;
+        }
+    }
+}
+
+// Actualizar cache después de nuevo registro
+async function actualizarCache(discordId) {
+    usuariosRegistrados.add(discordId);
+    
+    try {
+        await fs.writeFile(CACHE_FILE, JSON.stringify([...usuariosRegistrados], null, 2));
+    } catch (error) {
+        console.error('❌ Error al actualizar cache JSON:', error);
+    }
+}
+
 async function ejecutar(message) {
     const esEnDM = message.channel.isDMBased();
-    console.log('=== Ejecutando registro ===');
-    console.log('Es en DM:', esEnDM);
     
     // Si NO es DM, verificar si ya tiene un registro en proceso
     if (!esEnDM) {
@@ -20,6 +69,12 @@ async function ejecutar(message) {
             await message.reply(mensajes.UsuarioEnRegistro(message.author));
             return;
         }
+    }
+    
+    // Verificar si el usuario ya completó un registro (verificación en RAM - rápida)
+    if (usuariosRegistrados.has(message.author.id)) {
+        await message.reply(mensajes.UsuarioYaConRegistro(message.author));
+        return;
     }
     
     // Verificar si el usuario está vetado
@@ -92,7 +147,7 @@ async function ejecutar(message) {
                         
                         await msg.edit({ components: [rowDisabled] });
                     } catch (error) {
-                        console.error('Error al deshabilitar botones:', error);
+                        // Ignorar error al deshabilitar botones
                     }
                 }
                 
@@ -136,51 +191,6 @@ async function procesarRespuestaDM(message) {
     
     if (!estadoUsuario) return;
     
-    if (message.content === 'Aurora!RTO') {
-        // Deshabilitar botones si existen
-        if (estadoUsuario.messageId && estadoUsuario.channelId) {
-            try {
-                const channel = await message.client.channels.fetch(estadoUsuario.channelId);
-                const msg = await channel.messages.fetch(estadoUsuario.messageId);
-                
-                const rowDisabled = new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('confirmar_cuenta_disabled')
-                            .setLabel('Registrar Cuenta')
-                            .setEmoji('1465263781348118564')
-                            .setStyle(ButtonStyle.Secondary)
-                            .setDisabled(true),
-                        new ButtonBuilder()
-                            .setCustomId('reintentar_cuenta_disabled')
-                            .setLabel('Volver a Comenzar')
-                            .setEmoji('1465219188561023124')
-                            .setStyle(ButtonStyle.Secondary)
-                            .setDisabled(true)
-                    );
-                
-                await msg.edit({ components: [rowDisabled] });
-            } catch (error) {
-                console.error('Error al deshabilitar botones:', error);
-            }
-        }
-        
-        usuariosEnRegistro.delete(userId);
-        
-        // Registrar timeout
-        const userData = await registrarTimeout(userId);
-        
-        if (userData.vetoHasta) {
-            // Tercer timeout - veto aplicado
-            const tiempoEspera = Math.floor(userData.vetoHasta / 1000);
-            await message.reply(mensajes.VetoPorTimeOutsRegistro(tiempoEspera));
-        } else {
-            // Timeout normal (1ro o 2do)
-            await message.reply(mensajes.TimeOutRegistro());
-        }
-        return;
-    }
-    
     if (message.content.toLowerCase() === 'aurora!cancelar') {
         // Deshabilitar botones si existen
         if (estadoUsuario.messageId && estadoUsuario.channelId) {
@@ -206,7 +216,7 @@ async function procesarRespuestaDM(message) {
                 
                 await msg.edit({ components: [rowDisabled] });
             } catch (error) {
-                console.error('Error al deshabilitar botones:', error);
+                // Ignorar error al deshabilitar botones
             }
         }
         
@@ -233,69 +243,6 @@ async function procesarRespuestaDM(message) {
     }
 }
 
-async function testEmbed(message) {
-    const { regionAPlatforma, verificarCuentaRiot, obtenerSummoner, obtenerCampeonesFavoritos, obtenerUltimasPartidas } = require('./riotAPI');
-    const { crearEmbedPerfil } = require('./EmbedRegistro');
-    
-    const gameName = 'cachorracachonda';
-    const tagLine = 'juzo';
-    const region = 'LAN';
-    const plataforma = regionAPlatforma[region];
-    
-    await message.reply('Generando embed de prueba...');
-    
-    try {
-        const resultado = await verificarCuentaRiot(gameName, tagLine, region);
-        
-        if (!resultado.existe) {
-            await message.reply('No se encontró la cuenta de prueba.');
-            return;
-        }
-        
-        const puuid = resultado.data.puuid;
-        const summoner = await obtenerSummoner(puuid, plataforma);
-        
-        if (!summoner) {
-            await message.reply('Error al obtener información del summoner.');
-            return;
-        }
-        
-        const rangos = {
-            soloq: {
-                tier: 'CHALLENGER',
-                rank: 'I',
-                lp: 1000
-            },
-            flex: {
-                tier: 'DIAMOND',
-                rank: 'III',
-                lp: 45
-            },
-            tft: null
-        };
-        
-        const campeonesFavoritos = await obtenerCampeonesFavoritos(puuid, plataforma);
-        const ultimasPartidas = await obtenerUltimasPartidas(puuid, plataforma);
-        
-        const datosJugador = {
-            riotID: `${gameName}#${tagLine}`,
-            region: region,
-            iconoId: summoner.profileIconId,
-            rangos: rangos,
-            campeonesFavoritos: campeonesFavoritos,
-            ultimasPartidas: ultimasPartidas
-        };
-        
-        const embed = await crearEmbedPerfil(datosJugador);
-        await message.channel.send({ 
-            content: 'Revisé mis archivos mágicos con la información que me diste. <:AuroraTea:1465551396848930901>\nEncontré esta cuenta… ¿Es la que quieres registrar?\nConfirma con los botones de abajo o dime y empezamos otra vez.',
-            embeds: [embed] 
-        });
-    } catch (error) {
-        console.error('Error en test:', error);
-        await message.reply('Error al generar el embed de prueba.');
-    }
-}
 
 async function manejarBotonConfirmacion(interaction) {
     const userId = interaction.user.id;
@@ -326,6 +273,11 @@ async function manejarBotonConfirmacion(interaction) {
         };
         
         const guardado = await guardarRegistro(datosParaGuardar);
+        
+        // Actualizar cache en memoria y JSON
+        if (guardado) {
+            await actualizarCache(userId);
+        }
         
         usuariosEnRegistro.delete(userId);
         
@@ -386,7 +338,8 @@ function tieneRegistroEnProceso(userId) {
 module.exports = { 
     ejecutar, 
     procesarRespuestaDM, 
-    testEmbed, 
+     
     manejarBotonConfirmacion, 
-    tieneRegistroEnProceso 
+    tieneRegistroEnProceso,
+    inicializarCache
 };

@@ -1,7 +1,7 @@
 {
   "802091838873403401": {
-    "contadorCancela": 2,
-    "contadorTimeout": 2,
+    "contadorCancela": 0,
+    "contadorTimeout": 1,
     "vetoHasta": null,
     "vetoCausa": null
   }

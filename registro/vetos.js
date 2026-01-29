@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Ruta del archivo de cancelaciones
-const CANCELACIONES_FILE = path.join(__dirname, 'cancelaciones.json');
+const CANCELACIONES_FILE = path.join(__dirname, 'vetos.json');
 
 // Cargar cancelaciones desde el archivo
 async function cargarCancelaciones() {

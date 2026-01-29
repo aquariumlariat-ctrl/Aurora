@@ -15,8 +15,11 @@ const client = new Client({
 });
 
 // Cuando el bot esté listo
-client.on('ready', () => {
+client.on('ready', async () => {
     console.log(`${client.user.tag} se ha encendido correctamente.`);
+    
+    // Inicializar cache de usuarios registrados
+    await registroCommand.inicializarCache();
 });
 
 // Cuando alguien escriba un mensaje
@@ -24,15 +27,7 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes del propio bot
     if (message.author.bot) return;
     
-    console.log('Mensaje recibido:', message.content, 'Canal:', message.channel.type);
-    
     const content = message.content;
-    
-    // Detectar comando Aurora!test
-    if (content.toLowerCase().startsWith('aurora!test')) {
-        await registroCommand.testEmbed(message);
-        return;
-    }
     
     // Si es un DM, procesar según el contexto
     if (message.channel.isDMBased()) {
@@ -54,11 +49,6 @@ client.on('messageCreate', async (message) => {
     if (content.toLowerCase().startsWith('aurora!registro')) {
         await registroCommand.ejecutar(message);
         return;
-    }
-    
-    // Responder a un mensaje simple
-    if (message.content === 'ping') {
-        message.reply('pong!');
     }
 });
 

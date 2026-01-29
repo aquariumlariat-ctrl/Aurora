@@ -141,7 +141,6 @@ async function guardarRegistro(datosUsuario) {
         
         // Obtener el índice de la fila recién agregada
         const updatedRange = appendResponse.data.updates.updatedRange;
-        console.log('📍 Debug - updatedRange:', updatedRange);
         
         // Extraer el número de fila del updatedRange
         // Ejemplo: "'Hoja 1'!A5:I5" -> extraer el 5
@@ -149,9 +148,6 @@ async function guardarRegistro(datosUsuario) {
         const filaMatch = updatedRange.match(/[A-Z]+(\d+)/);
         const filaReal = parseInt(filaMatch[1]); // Número de fila real (1-based)
         const filaIndex = filaReal - 1; // Convertir a índice 0-based
-        
-        console.log('📍 Debug - Fila real:', filaReal);
-        console.log('📍 Debug - Fila index (0-based):', filaIndex);
         
         // Determinar el color de fondo según si el número de registro es par o impar
         // numeroRegistro es "#0", "#1", "#2", etc.
@@ -167,8 +163,6 @@ async function guardarRegistro(datosUsuario) {
             // #f6f3fe -> RGB(246, 243, 254)
             bgColor = { red: 246/255, green: 243/255, blue: 254/255 };
         }
-        
-        console.log('🎨 Color de fondo:', esImpar ? '#d9d2e9 (impar)' : '#f6f3fe (par)');
         
         // Aplicar bordes, centrado, color y dropdown en una sola operación batchUpdate
         try {
@@ -258,15 +252,10 @@ async function guardarRegistro(datosUsuario) {
                     ]
                 }
             });
-            
-            console.log('✅ Formato aplicado correctamente (color, bordes, centrado, dropdown)');
         } catch (formatError) {
             console.error('⚠️ Error al aplicar formato:', formatError.message);
         }
         
-        console.log('✅ Registro guardado en Google Sheets exitosamente');
-        console.log(`   Número de registro: ${numeroRegistro}`);
-        console.log(`   Fila: ${filaReal}`);
         return true;
         
     } catch (error) {
@@ -275,6 +264,38 @@ async function guardarRegistro(datosUsuario) {
     }
 }
 
+// Cargar todos los usuarios registrados desde Google Sheets
+async function cargarUsuariosDesdeSheet() {
+    try {
+        const authClient = await autenticar();
+        const sheets = google.sheets({ version: 'v4', auth: authClient });
+        
+        const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+        
+        // Obtener todos los Discord IDs de la columna B
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: 'B:B' // Columna B (ID Discord)
+        });
+        
+        const valores = response.data.values || [];
+        
+        // Saltar las primeras 2 filas (título y encabezados)
+        // Filtrar valores vacíos/undefined
+        const discordIds = valores
+            .slice(2)
+            .map(row => row[0])
+            .filter(id => id && id.trim() !== '');
+        
+        return discordIds;
+        
+    } catch (error) {
+        console.error('❌ Error al cargar usuarios desde Sheet:', error);
+        return []; // En caso de error, retornar array vacío
+    }
+}
+
 module.exports = {
-    guardarRegistro
+    guardarRegistro,
+    cargarUsuariosDesdeSheet
 };
