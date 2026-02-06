@@ -116,7 +116,7 @@ async function guardarRegistro(datosUsuario) {
             day: '2-digit'
         });
         
-        // Preparar los valores (sin PUUID, con nuevo orden)
+        // Preparar los valores (ahora CON PUUID)
         const valores = [[
             numeroRegistro,                              // A: Número de Registro
             datosUsuario.discordId,                      // B: ID Discord
@@ -126,13 +126,14 @@ async function guardarRegistro(datosUsuario) {
             formatearRango(datosUsuario.rangos.soloq),   // F: Clasificación Solo/Duo
             formatearRango(datosUsuario.rangos.flex),    // G: Clasificación Flexible
             formatearRango(datosUsuario.rangos.tft),     // H: Clasificación TFT
-            fecha                                        // I: Fecha de Registro
+            fecha,                                       // I: Fecha de Registro
+            datosUsuario.puuid                           // J: PUUID
         ]];
         
         // Agregar la fila
         const appendResponse = await sheets.spreadsheets.values.append({
             spreadsheetId,
-            range: 'A:I',
+            range: 'A:J',
             valueInputOption: 'USER_ENTERED',
             resource: {
                 values: valores
@@ -164,13 +165,13 @@ async function guardarRegistro(datosUsuario) {
             bgColor = { red: 246/255, green: 243/255, blue: 254/255 };
         }
         
-        // Aplicar bordes, centrado, color y dropdown en una sola operación batchUpdate
+        // Aplicar bordes, centrado, color, dropdown y text wrapping en una sola operación batchUpdate
         try {
             await sheets.spreadsheets.batchUpdate({
                 spreadsheetId,
                 resource: {
                     requests: [
-                        // 1. Aplicar color de fondo a toda la fila
+                        // 1. Aplicar color de fondo a toda la fila (A-J)
                         {
                             repeatCell: {
                                 range: {
@@ -178,7 +179,7 @@ async function guardarRegistro(datosUsuario) {
                                     startRowIndex: filaIndex,
                                     endRowIndex: filaIndex + 1,
                                     startColumnIndex: 0,
-                                    endColumnIndex: 9
+                                    endColumnIndex: 10 // Hasta columna J
                                 },
                                 cell: {
                                     userEnteredFormat: {
@@ -188,7 +189,7 @@ async function guardarRegistro(datosUsuario) {
                                 fields: 'userEnteredFormat.backgroundColor'
                             }
                         },
-                        // 2. Aplicar bordes
+                        // 2. Aplicar bordes (A-J)
                         {
                             updateBorders: {
                                 range: {
@@ -196,7 +197,7 @@ async function guardarRegistro(datosUsuario) {
                                     startRowIndex: filaIndex,
                                     endRowIndex: filaIndex + 1,
                                     startColumnIndex: 0,
-                                    endColumnIndex: 9
+                                    endColumnIndex: 10 // Hasta columna J
                                 },
                                 top: { style: 'SOLID', width: 1, color: { red: 0, green: 0, blue: 0 } },
                                 bottom: { style: 'SOLID', width: 1, color: { red: 0, green: 0, blue: 0 } },
@@ -206,7 +207,7 @@ async function guardarRegistro(datosUsuario) {
                                 innerVertical: { style: 'SOLID', width: 1, color: { red: 0, green: 0, blue: 0 } }
                             }
                         },
-                        // 3. Centrar horizontalmente toda la fila
+                        // 3. Centrar horizontalmente toda la fila (A-J)
                         {
                             repeatCell: {
                                 range: {
@@ -214,7 +215,7 @@ async function guardarRegistro(datosUsuario) {
                                     startRowIndex: filaIndex,
                                     endRowIndex: filaIndex + 1,
                                     startColumnIndex: 0,
-                                    endColumnIndex: 9
+                                    endColumnIndex: 10 // Hasta columna J
                                 },
                                 cell: {
                                     userEnteredFormat: {
@@ -224,7 +225,25 @@ async function guardarRegistro(datosUsuario) {
                                 fields: 'userEnteredFormat.horizontalAlignment'
                             }
                         },
-                        // 4. Aplicar dropdown de región en columna E
+                        // 4. Aplicar text wrapping a toda la fila (A-J)
+                        {
+                            repeatCell: {
+                                range: {
+                                    sheetId: 0,
+                                    startRowIndex: filaIndex,
+                                    endRowIndex: filaIndex + 1,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: 10 // Hasta columna J
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        wrapStrategy: 'WRAP'
+                                    }
+                                },
+                                fields: 'userEnteredFormat.wrapStrategy'
+                            }
+                        },
+                        // 5. Aplicar dropdown de región en columna E
                         {
                             setDataValidation: {
                                 range: {

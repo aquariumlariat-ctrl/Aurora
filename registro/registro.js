@@ -113,12 +113,17 @@ async function ejecutar(message) {
         }
         
         const tiempoInicio = Date.now();
+        
+        const client = message.client;
+        
+        // Intentar enviar el mensaje inicial al DM
+        await message.author.send(mensajes.ArranqueRegistro);
+        
+        // Solo si el DM se envió correctamente, agregar al usuario al registro
         usuariosEnRegistro.set(message.author.id, { 
             etapa: 'riotid',
             tiempoInicio: tiempoInicio
         });
-        
-        const client = message.client;
         
         setTimeout(async () => {
             const estadoActual = usuariosEnRegistro.get(message.author.id);
@@ -171,16 +176,26 @@ async function ejecutar(message) {
             }
         }, 60 * 60 * 1000);
         
-        await message.author.send(mensajes.ArranqueRegistro);
-        
         // Solo responder en el canal si NO es un DM
         if (!esEnDM) {
             await message.reply(mensajes.LlamadoRegistro(message.author));
         }
     } catch (error) {
         console.error('Error en ejecutar:', error);
+        
+        // Limpiar el estado del usuario si falla
+        // Esto previene que quede "atrapado" en un registro fantasma
+        usuariosEnRegistro.delete(message.author.id);
+        
+        // Responder con mensaje de error si no es DM
         if (!esEnDM) {
-            await message.reply(mensajes.FalloLlamadoRegistro(message.author));
+            // Verificar si el error es por DMs cerrados
+            if (error.code === 50007 || error.message?.includes('Cannot send messages to this user')) {
+                await message.reply(mensajes.FalloLlamadoRegistro(message.author));
+            } else {
+                // Otro tipo de error
+                await message.reply(`Hubo un error al iniciar el registro. Por favor, intenta nuevamente. <:AuroraPout:1465262072932728939>`);
+            }
         }
     }
 }

@@ -2,6 +2,8 @@
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 require('dotenv').config();
 const registroCommand = require('./registro/registro');
+const personalizarCommand = require('./personalizar/personalizar');
+const perfilCommand = require('./perfil/perfil');
 
 // Crear el cliente del bot
 const client = new Client({
@@ -15,11 +17,8 @@ const client = new Client({
 });
 
 // Cuando el bot esté listo
-client.on('ready', async () => {
+client.on('ready', () => {
     console.log(`${client.user.tag} se ha encendido correctamente.`);
-    
-    // Inicializar cache de usuarios registrados
-    await registroCommand.inicializarCache();
 });
 
 // Cuando alguien escriba un mensaje
@@ -27,12 +26,21 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes del propio bot
     if (message.author.bot) return;
     
+    console.log('Mensaje recibido:', message.content, 'Canal:', message.channel.type);
+    
     const content = message.content;
+    
+    // Detectar comando Aurora!test
+    if (content.toLowerCase().startsWith('aurora!test')) {
+        await registroCommand.testEmbed(message);
+        return;
+    }
     
     // Si es un DM, procesar según el contexto
     if (message.channel.isDMBased()) {
         // Si hay registro en proceso, tratar Aurora!registro como respuesta normal
         const tieneRegistro = registroCommand.tieneRegistroEnProceso(message.author.id);
+        const tienePersonalizacion = personalizarCommand.usuariosEnPersonalizacion.has(message.author.id);
         
         if (content.toLowerCase().startsWith('aurora!registro') && !tieneRegistro) {
             // Solo iniciar registro si NO hay uno en proceso
@@ -40,8 +48,20 @@ client.on('messageCreate', async (message) => {
             return;
         }
         
+        if (content.toLowerCase().startsWith('aurora!personalizar') && !tienePersonalizacion) {
+            // Solo iniciar personalización si NO hay una en proceso
+            await personalizarCommand.ejecutar(message);
+            return;
+        }
+        
         // Procesar respuesta del registro (incluye Aurora!registro si ya hay proceso)
-        await registroCommand.procesarRespuestaDM(message);
+        if (tieneRegistro) {
+            await registroCommand.procesarRespuestaDM(message);
+            return;
+        }
+        
+        // Si hay personalización en proceso, el collector interno lo maneja
+        // No necesitamos procesar nada aquí porque el collector está activo
         return;
     }
     
@@ -49,6 +69,23 @@ client.on('messageCreate', async (message) => {
     if (content.toLowerCase().startsWith('aurora!registro')) {
         await registroCommand.ejecutar(message);
         return;
+    }
+    
+    // Detectar comando Aurora!personalizar en canal
+    if (content.toLowerCase().startsWith('aurora!personalizar')) {
+        await personalizarCommand.ejecutar(message);
+        return;
+    }
+    
+    // Detectar comando Aurora!perfil en canal
+    if (content.toLowerCase().startsWith('aurora!perfil')) {
+        await perfilCommand.ejecutar(message);
+        return;
+    }
+    
+    // Responder a un mensaje simple
+    if (message.content === 'ping') {
+        message.reply('pong!');
     }
 });
 

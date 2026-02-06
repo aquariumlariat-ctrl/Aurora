@@ -6,12 +6,11 @@ const {
     regionAPlatforma, 
     verificarCuentaRiot, 
     obtenerSummoner,
-    obtenerSummonerTFT,
     obtenerRangos,
-    obtenerRangoTFT,
     obtenerCampeonesFavoritos, 
     obtenerUltimasPartidas 
 } = require('./riot_api');
+const { obtenerRangoTFT } = require('../tft_elo');
 
 // Validar formato de Riot ID
 async function validarRiotID(message, estadoUsuario, usuariosEnRegistro) {
@@ -67,21 +66,14 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
                 return;
             }
             
-            // Obtener summoner TFT primero (necesario para obtener rango TFT)
-            const summonerTFT = await obtenerSummonerTFT(puuid, plataforma);
             
-            // Hacer llamadas en paralelo para optimizar velocidad
-            const [rangos, campeonesFavoritos, ultimasPartidas] = await Promise.all([
+            // Hacer llamadas en paralelo para optimizar velocidad (LoL + TFT)
+            const [rangos, rangoTFT, campeonesFavoritos, ultimasPartidas] = await Promise.all([
                 obtenerRangos(puuid, plataforma),
+                obtenerRangoTFT(gameName, tagLine, plataforma), // ✅ CAMBIO: Ahora usa gameName y tagLine
                 obtenerCampeonesFavoritos(puuid, plataforma),
                 obtenerUltimasPartidas(puuid, plataforma)
             ]);
-            
-            // Obtener rango TFT si existe el summoner TFT
-            let rangoTFT = null;
-            if (summonerTFT && summonerTFT.id) {
-                rangoTFT = await obtenerRangoTFT(summonerTFT.id, plataforma);
-            }
             
             estadoUsuario.etapa = 'confirmacion';
             estadoUsuario.riotID = `${resultado.data.gameName}#${resultado.data.tagLine}`;

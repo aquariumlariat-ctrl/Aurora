@@ -101,18 +101,7 @@ async function crearEmbedPerfil(datosJugador) {
                 value: clasificacionTexto,
                 inline: false
             },
-            {
-                name: 'Campeones Favoritos',
-                value: campeonesTexto || 'Sin datos',
-                inline: true
-            },
-            {
-                name: 'Ultimas Partidas',
-                value: partidasTexto,
-                inline: true
-            }
-        )
-        .setImage();
+        );
     
     return embed;
 }
