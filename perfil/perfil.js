@@ -142,12 +142,97 @@ async function actualizarRiotIDEnSheet(discordId, nuevoRiotID) {
         });
         
         console.log(`✅ Riot ID actualizado en Sheet: ${nuevoRiotID}`);
-        return true;
+        return { success: true, filaReal };
         
     } catch (error) {
         console.error('Error al actualizar Riot ID en Sheet:', error);
+        return { success: false };
+    }
+}
+
+// Función para actualizar elos en Google Sheets
+async function actualizarElosEnSheet(discordId, rangos) {
+    try {
+        const authClient = await autenticar();
+        const sheets = google.sheets({ version: 'v4', auth: authClient });
+        const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+        
+        // Obtener todas las filas para encontrar el índice del usuario
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: 'A:J'
+        });
+        
+        const valores = response.data.values || [];
+        const filas = valores.slice(2); // Saltar título y encabezados
+        
+        // Encontrar el índice de la fila
+        const indiceRelativo = filas.findIndex(fila => fila[1] === discordId);
+        
+        if (indiceRelativo === -1) {
+            console.error('Usuario no encontrado en Sheet para actualizar elos');
+            return false;
+        }
+        
+        const filaReal = indiceRelativo + 3; // +3 por las 2 filas de cabecera + base 1
+        
+        // Formatear rangos
+        const rangoSoloqTexto = formatearRango(rangos.soloq);
+        const rangoFlexTexto = formatearRango(rangos.flex);
+        const rangoTFTTexto = formatearRango(rangos.tft);
+        
+        // Actualizar columnas F, G, H (Solo/Duo, Flex, TFT)
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `F${filaReal}:H${filaReal}`,
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [[rangoSoloqTexto, rangoFlexTexto, rangoTFTTexto]]
+            }
+        });
+        
+        console.log(`✅ Elos actualizados en Sheet`);
+        return true;
+        
+    } catch (error) {
+        console.error('Error al actualizar elos en Sheet:', error);
         return false;
     }
+}
+
+// Traducir tier al español
+function traducirTier(tier) {
+    const traducciones = {
+        'IRON': 'Hierro',
+        'BRONZE': 'Bronce',
+        'SILVER': 'Plata',
+        'GOLD': 'Oro',
+        'PLATINUM': 'Platino',
+        'EMERALD': 'Esmeralda',
+        'DIAMOND': 'Diamante',
+        'MASTER': 'Maestro',
+        'GRANDMASTER': 'Gran Maestro',
+        'CHALLENGER': 'Challenger'
+    };
+    
+    return traducciones[tier] || tier;
+}
+
+// Formatear rango para mostrar (sin LP, en español)
+function formatearRango(rango) {
+    if (!rango) {
+        return 'Sin Clasificación';
+    }
+    
+    const tierTraducido = traducirTier(rango.tier);
+    
+    // Para Master, Grandmaster y Challenger (sin división)
+    if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rango.tier)) {
+        return tierTraducido;
+    }
+    
+    // Para el resto de rangos (con división)
+    return `${tierTraducido} ${rango.rank}`;
 }
 
 // Obtener datos de un usuario desde Google Sheets
@@ -392,6 +477,13 @@ async function ejecutar(message) {
             obtenerUltimasPartidas(puuidFinal, plataforma),
             obtenerRolesPrincipales(puuidFinal, plataforma)
         ]);
+        
+        // 🔄 ACTUALIZAR ELOS EN GOOGLE SHEETS
+        await actualizarElosEnSheet(datosSheet.discordId, {
+            soloq: rangos.soloq,
+            flex: rangos.flex,
+            tft: rangoTFT
+        });
         
         // Obtener avatar y nombre de visualización del usuario de Discord
         let discordAvatar = usuarioObjetivo.displayAvatarURL ? usuarioObjetivo.displayAvatarURL({ size: 256 }) : null;
