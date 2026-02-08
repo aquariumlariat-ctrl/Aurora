@@ -24,14 +24,15 @@ const { espaciadosRankeds } = require('../utilidades/espaciados_rankeds');
  * @param {Array} datosUsuario.insignias - Array de emojis de insignias (opcional)
  * @param {string} datosUsuario.biografia - Biografía del usuario (opcional)
  * @param {Object} datosUsuario.redesSociales - Redes sociales (opcional)
+ * @param {string} colorPersonalizado - Color hex personalizado (opcional)
  */
-async function crearEmbedPerfilUsuario(datosUsuario) {
+async function crearEmbedPerfilUsuario(datosUsuario, colorPersonalizado = null) {
     // Thumbnail: imagen de perfil social (no el icono de LoL)
-    const thumbnailUrl = datosUsuario.thumbnailUrl || 'https://i.imgur.com/vmjLxxr.png';
+    const thumbnailUrl = datosUsuario.thumbnailUrl || 'https://i.imgur.com/2bowbEO.png';
     
     // Función auxiliar para formatear rangos con emojis
     function formatearRangoConEmoji(rango, despuesEmoji) {
-        if (!rango) return `<:SinRango:1465508962341490861>${despuesEmoji}Sin Clasificación`;
+        if (!rango) return `<:SinRango:1469941168270872696>${despuesEmoji}Sin Clasificación`;
         
         const tier = rango.tier;
         const rank = rango.rank;
@@ -160,7 +161,7 @@ async function crearEmbedPerfilUsuario(datosUsuario) {
     
     // Crear el embed
     const embed = new EmbedBuilder()
-        .setColor(0xACB9D0) // Color por defecto (#acb9d0)
+        .setColor(colorPersonalizado || 0x87B1E1) // Color personalizado o por defecto (#87B1E1)
         .setAuthor({
             name: `Perfil de ${datosUsuario.discordUsername}`,
             iconURL: datosUsuario.discordAvatar || 'https://i.imgur.com/kEgAzcb.png'
@@ -217,7 +218,7 @@ async function crearEmbedPerfilUsuario(datosUsuario) {
                 inline: false
             }
         )
-        .setImage('https://i.imgur.com/6fGRkuk.png'); // Imagen banner al final
+        .setImage('https://i.imgur.com/sZWCDyT.png'); // Imagen banner al final
     
     return embed;
 }

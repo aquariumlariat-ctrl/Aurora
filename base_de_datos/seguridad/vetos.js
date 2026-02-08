@@ -1,4 +1,4 @@
-// registro/cancelaciones.js
+// base_de_datos/seguridad/vetos.js
 const fs = require('fs').promises;
 const path = require('path');
 

@@ -4,6 +4,7 @@ require('dotenv').config();
 const registroCommand = require('./registro/registro');
 const personalizarCommand = require('./personalizar/personalizar');
 const perfilCommand = require('./perfil/perfil');
+const { iniciarActualizacionAutomatica } = require('./scripts/actualizar_perfiles_lol');
 
 // Crear el cliente del bot
 const client = new Client({
@@ -17,8 +18,14 @@ const client = new Client({
 });
 
 // Cuando el bot esté listo
-client.on('ready', () => {
+client.on('ready', async () => {
     console.log(`${client.user.tag} se ha encendido correctamente.`);
+    
+    // Inicializar cache de usuarios registrados desde Google Sheets
+    await registroCommand.inicializarCache();
+    
+    // ✅ NUEVO: Iniciar actualización automática de perfiles cada 1 hora
+    iniciarActualizacionAutomatica();
 });
 
 // Cuando alguien escriba un mensaje
@@ -93,8 +100,16 @@ client.on('messageCreate', async (message) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
     
+    // Botones de confirmación de registro
     if (interaction.customId === 'confirmar_cuenta' || interaction.customId === 'reintentar_cuenta') {
         await registroCommand.manejarBotonConfirmacion(interaction);
+        return;
+    }
+    
+    // Botones de confirmación de color
+    if (interaction.customId === 'guardar_color' || interaction.customId === 'reintentar_color' || interaction.customId === 'cancelar_color') {
+        await personalizarCommand.manejarBotonColor(interaction, client);
+        return;
     }
 });
 

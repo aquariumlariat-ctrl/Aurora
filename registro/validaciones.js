@@ -1,4 +1,4 @@
-// registro/validaciones.js
+// registro/validaciones.js (VERSIÓN CORREGIDA)
 const mensajes = require('./mensajes');
 const { crearEmbedPerfil } = require('./embed_perfil');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -8,9 +8,11 @@ const {
     obtenerSummoner,
     obtenerRangos,
     obtenerCampeonesFavoritos, 
-    obtenerUltimasPartidas 
-} = require('./riot_api');
-const { obtenerRangoTFT } = require('../tft_elo');
+    obtenerUltimasPartidas,
+    obtenerRolesPrincipales
+} = require('../apis/lol_api');
+const { obtenerRangoTFT } = require('../apis/tft_api');
+const { crearEntradaLoL, actualizarPersonalizacion } = require('../base_de_datos/perfiles_helpers');
 
 // Validar formato de Riot ID
 async function validarRiotID(message, estadoUsuario, usuariosEnRegistro) {
@@ -66,13 +68,13 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
                 return;
             }
             
-            
-            // Hacer llamadas en paralelo para optimizar velocidad (LoL + TFT)
-            const [rangos, rangoTFT, campeonesFavoritos, ultimasPartidas] = await Promise.all([
+            // Hacer llamadas en paralelo para optimizar velocidad (LoL + TFT + Roles)
+            const [rangos, rangoTFT, campeonesFavoritos, ultimasPartidas, rolesPrincipales] = await Promise.all([
                 obtenerRangos(puuid, plataforma),
-                obtenerRangoTFT(gameName, tagLine, plataforma), // ✅ CAMBIO: Ahora usa gameName y tagLine
+                obtenerRangoTFT(gameName, tagLine, plataforma),
                 obtenerCampeonesFavoritos(puuid, plataforma),
-                obtenerUltimasPartidas(puuid, plataforma)
+                obtenerUltimasPartidas(puuid, plataforma),
+                obtenerRolesPrincipales(puuid, plataforma)
             ]);
             
             estadoUsuario.etapa = 'confirmacion';
@@ -84,6 +86,7 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
                 flex: rangos.flex,
                 tft: rangoTFT
             };
+            estadoUsuario.rolesPrincipales = rolesPrincipales;
             
             const datosJugador = {
                 riotID: `${resultado.data.gameName}#${resultado.data.tagLine}`,
@@ -125,6 +128,7 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
             estadoUsuario.channelId = loadingMessage.channel.id;
             usuariosEnRegistro.set(message.author.id, estadoUsuario);
         } catch (error) {
+            console.error('❌ Error al obtener datos:', error);
             await loadingMessage.edit(mensajes.ErrorSummonerRegistro);
             return;
         }
@@ -135,7 +139,60 @@ async function validarRegion(message, estadoUsuario, usuariosEnRegistro) {
     }
 }
 
+/**
+ * Guardar datos iniciales en AMBOS JSON
+ * Esta función se llama cuando el usuario confirma su cuenta
+ * @param {string} userId - ID del usuario de Discord
+ * @param {Object} estadoUsuario - Estado del usuario en registro
+ * @returns {Promise<boolean>} - true si se guardó correctamente
+ */
+async function guardarDatosIniciales(userId, estadoUsuario) {
+    try {
+        // 1. Crear entrada en perfiles_lol_datos.json
+        const datosLoL = {
+            riotID: estadoUsuario.riotID,
+            region: estadoUsuario.region,
+            puuid: estadoUsuario.puuid,
+            rangos: estadoUsuario.rangos,
+            rolesPrincipales: estadoUsuario.rolesPrincipales || []
+        };
+        
+        const guardadoLoL = await crearEntradaLoL(userId, datosLoL);
+        
+        // 2. Crear entrada DEFAULT en perfiles_personalizacion.json
+        const datosPersonalizacion = {
+            campeonFavorito: null,
+            club: null,
+            clubEmoji: null,
+            puesto: null,
+            pareja: null,
+            biografia: '*Este usuario es todo un misterio… aún no ha agregado una biografía a su perfil.*',
+            redesSociales: null,
+            colorPersonalizado: null,
+            thumbnailUrl: null
+        };
+        
+        const guardadoPersonalizacion = await actualizarPersonalizacion(userId, datosPersonalizacion);
+        
+        // Retornar true solo si AMBOS se guardaron correctamente
+        const exito = guardadoLoL && guardadoPersonalizacion;
+        
+        if (exito) {
+            console.log(`✅ Usuario ${userId} creado en ambos JSON`);
+        } else {
+            console.error(`❌ Error al crear usuario ${userId} en JSON`);
+        }
+        
+        return exito;
+        
+    } catch (error) {
+        console.error(`❌ Error en guardarDatosIniciales:`, error);
+        return false;
+    }
+}
+
 module.exports = {
     validarRiotID,
-    validarRegion
+    validarRegion,
+    guardarDatosIniciales
 };

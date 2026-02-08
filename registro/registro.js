@@ -1,9 +1,9 @@
 // registro/registro.js
 const mensajes = require('./mensajes');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { estaVetado, registrarCancelacion, registrarTimeout } = require('./vetos');
+const { estaVetado, registrarCancelacion, registrarTimeout } = require('../base_de_datos/seguridad/vetos');
 const { validarRiotID, validarRegion } = require('./validaciones');
-const { guardarRegistro, cargarUsuariosDesdeSheet } = require('./google_sheets');
+const { guardarRegistro, cargarTodosLosUsuarios } = require('../base_de_datos/sheets_helpers');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -14,14 +14,14 @@ const usuariosEnRegistro = new Map();
 let usuariosRegistrados = new Set();
 
 // Archivo JSON para persistencia
-const CACHE_FILE = path.join(__dirname, 'registrados.json');
+const CACHE_FILE = path.join(__dirname, '../base_de_datos/cache/registrados.json');
 
 // Cargar usuarios al iniciar
 async function inicializarCache() {
     try {
         // Cargar desde Google Sheets
         console.log('🔄 Cargando usuarios registrados desde Google Sheets...');
-        const idsDesdeSheet = await cargarUsuariosDesdeSheet();
+        const idsDesdeSheet = await cargarTodosLosUsuarios();
         
         // Guardar/actualizar JSON
         await fs.writeFile(CACHE_FILE, JSON.stringify(idsDesdeSheet, null, 2));
@@ -277,7 +277,7 @@ async function manejarBotonConfirmacion(interaction) {
         const puuid = estadoUsuario.puuid;
         const rangos = estadoUsuario.rangos;
         
-        // Guardar en Google Sheets
+        // ✅ CAMBIO 1: Guardar en Google Sheets (mantener compatibilidad)
         const datosParaGuardar = {
             discordId: userId,
             discordUsername: interaction.user.username,
@@ -287,10 +287,14 @@ async function manejarBotonConfirmacion(interaction) {
             puuid: puuid
         };
         
-        const guardado = await guardarRegistro(datosParaGuardar);
+        const guardadoSheet = await guardarRegistro(datosParaGuardar);
         
-        // Actualizar cache en memoria y JSON
-        if (guardado) {
+        // ✅ CAMBIO 2: Guardar en perfiles_lol_datos.json
+        const { guardarDatosIniciales } = require('./validaciones');
+        const guardadoJSON = await guardarDatosIniciales(userId, estadoUsuario);
+        
+        // Actualizar cache en memoria y JSON (registrados.json)
+        if (guardadoSheet) {
             await actualizarCache(userId);
         }
         
@@ -316,7 +320,11 @@ async function manejarBotonConfirmacion(interaction) {
             components: [rowDisabled]
         });
         
-        await interaction.channel.send(mensajes.CompletoRegistro(riotID, region));
+        if (guardadoSheet && guardadoJSON) {
+            await interaction.channel.send(mensajes.CompletoRegistro(riotID, region));
+        } else {
+            await interaction.channel.send('❌ Hubo un error al completar el registro. Por favor, contacta a un administrador.');
+        }
         
     } else if (interaction.customId === 'reintentar_cuenta') {
         estadoUsuario.etapa = 'riotid';

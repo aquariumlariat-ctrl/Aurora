@@ -438,3 +438,85 @@ module.exports = {
     obtenerRolesPrincipales,
     obtenerRolPrincipal
 };
+/**
+ * Obtiene el Riot ID actual desde un PUUID (por si cambió el nombre)
+ * @param {string} puuid - PUUID de la cuenta Riot
+ * @returns {Promise<Object|null>} - { riotID, gameName, tagLine } o null
+ */
+async function obtenerRiotIDActual(puuid) {
+    try {
+        const routingRegion = 'americas';
+        const url = `https://${routingRegion}.api.riotgames.com/riot/account/v1/accounts/by-puuid/${puuid}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'X-Riot-Token': process.env.RIOT_API_KEY
+            }
+        });
+        
+        if (response.status === 200) {
+            const data = await response.json();
+            return {
+                riotID: `${data.gameName}#${data.tagLine}`,
+                gameName: data.gameName,
+                tagLine: data.tagLine
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error al obtener Riot ID actual:', error);
+        return null;
+    }
+}
+
+/**
+ * Obtiene todos los datos de Riot API necesarios para perfil
+ * Agrupa llamadas en paralelo para optimizar velocidad
+ * @param {string} puuid - PUUID de la cuenta
+ * @param {string} plataforma - Plataforma regional (la1, la2, etc)
+ * @param {string} gameName - Nombre del jugador (para TFT)
+ * @param {string} tagLine - Tag del jugador (para TFT)
+ * @returns {Promise<Object|null>} - Datos completos o null
+ */
+async function obtenerDatosRiot(puuid, plataforma, gameName, tagLine) {
+    try {
+        // Import TFT dentro de la función para evitar dependencia circular
+        const { obtenerRangoTFT } = require('./tft_api');
+        
+        // Obtener summoner (necesario para iconId)
+        const summoner = await obtenerSummoner(puuid, plataforma);
+        
+        if (!summoner) {
+            return null;
+        }
+        
+        // Hacer llamadas en paralelo para optimizar
+        const [rangos, rangoTFT, campeonesFavoritos, ultimasPartidas, rolesPrincipales] = await Promise.all([
+            obtenerRangos(puuid, plataforma),
+            obtenerRangoTFT(gameName, tagLine, plataforma),
+            obtenerCampeonesFavoritos(puuid, plataforma),
+            obtenerUltimasPartidas(puuid, plataforma),
+            obtenerRolesPrincipales(puuid, plataforma)
+        ]);
+        
+        return {
+            summoner,
+            rangos: {
+                soloq: rangos.soloq,
+                flex: rangos.flex,
+                tft: rangoTFT
+            },
+            campeonesFavoritos,
+            ultimasPartidas,
+            rolesPrincipales
+        };
+    } catch (error) {
+        console.error('Error al obtener datos de Riot:', error);
+        return null;
+    }
+}
+
+// Agregar al export
+module.exports.obtenerRiotIDActual = obtenerRiotIDActual;
+module.exports.obtenerDatosRiot = obtenerDatosRiot;

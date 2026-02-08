@@ -1,0 +1,164 @@
+{
+  "802091838873403401": {
+    "riotID": "Kerri#high",
+    "region": "LAN",
+    "puuid": "zWtqvrvyr-AERel4IfJXCEUqGKUOFRFWKKCucC8uhKQIWjkAr0d1WzGoAPTxbjiydAhbMuB56XLsMw",
+    "rangos": {
+      "soloq": {
+        "tier": "GRANDMASTER",
+        "rank": "I",
+        "lp": 537
+      },
+      "flex": null,
+      "tft": {
+        "tier": "EMERALD",
+        "rank": "I",
+        "lp": 43
+      }
+    },
+    "rolesPrincipales": [
+      {
+        "rol": "JUNGLE",
+        "cantidad": 12,
+        "porcentaje": 75
+      },
+      {
+        "rol": "BOTTOM",
+        "cantidad": 3,
+        "porcentaje": 19
+      }
+    ],
+    "ultimaActualizacion": "2026-02-08T06:38:37.499Z"
+  },
+  "762351230752129047": {
+    "riotID": "CachorraCachonda#Juzo",
+    "region": "LAN",
+    "puuid": "P0sJUzPUYybJ33S4wsdTLNTBPqcz4nggaQNi243UJgpT42yQcppnbajziV5DM7o_99jb7KPjeiFXhA",
+    "rangos": {
+      "soloq": {
+        "tier": "PLATINUM",
+        "rank": "IV",
+        "lp": 20
+      },
+      "flex": {
+        "tier": "EMERALD",
+        "rank": "II",
+        "lp": 47
+      },
+      "tft": {
+        "tier": "GOLD",
+        "rank": "II",
+        "lp": 49
+      }
+    },
+    "rolesPrincipales": [
+      {
+        "rol": "MIDDLE",
+        "cantidad": 14,
+        "porcentaje": 93
+      },
+      {
+        "rol": "UTILITY",
+        "cantidad": 1,
+        "porcentaje": 7
+      }
+    ],
+    "ultimaActualizacion": "2026-02-08T06:38:47.293Z"
+  },
+  "635286313096052747": {
+    "riotID": "Moón Cake#567",
+    "region": "LAN",
+    "puuid": "uHmld-r_PeQ48AO4XS8IJJzB5ty1SQAHreuYdbjYGkysZ2-KWPq316V5fl_Pkwicbqw_FMor18H3dQ",
+    "rangos": {
+      "soloq": {
+        "tier": "PLATINUM",
+        "rank": "I",
+        "lp": 15
+      },
+      "flex": {
+        "tier": "PLATINUM",
+        "rank": "II",
+        "lp": 44
+      },
+      "tft": {
+        "tier": "SILVER",
+        "rank": "I",
+        "lp": 31
+      }
+    },
+    "rolesPrincipales": [
+      {
+        "rol": "UTILITY",
+        "cantidad": 20,
+        "porcentaje": 100
+      }
+    ],
+    "ultimaActualizacion": "2026-02-08T06:38:57.256Z"
+  },
+  "530591756908101652": {
+    "riotID": "Skyric#AFI",
+    "region": "LAN",
+    "puuid": "0SJnmZU_QdlXEPCQrXbs94Vdx3KgwBhSH0fP1tJnQg4PE-jEHOYxYrgRyw9N4hxn3y8RN_6aDkszBg",
+    "rangos": {
+      "soloq": {
+        "tier": "EMERALD",
+        "rank": "IV",
+        "lp": 16
+      },
+      "flex": {
+        "tier": "PLATINUM",
+        "rank": "III",
+        "lp": 93
+      },
+      "tft": null
+    },
+    "rolesPrincipales": [
+      {
+        "rol": "MIDDLE",
+        "cantidad": 19,
+        "porcentaje": 95
+      },
+      {
+        "rol": "BOTTOM",
+        "cantidad": 1,
+        "porcentaje": 5
+      }
+    ],
+    "ultimaActualizacion": "2026-02-08T06:39:06.500Z"
+  },
+  "278342336273055756": {
+    "riotID": "Cyrene#Lys",
+    "region": "LAN",
+    "puuid": "ws5b8gHT-XLxSTg3rkZK-5tPOXXggno1AP8_VW0Kh9M5R9YmYjN1NXY9hxGdXaxzuUXowdBEEAT_Xw",
+    "rangos": {
+      "soloq": {
+        "tier": "PLATINUM",
+        "rank": "II",
+        "lp": 36
+      },
+      "flex": {
+        "tier": "DIAMOND",
+        "rank": "II",
+        "lp": 24
+      },
+      "tft": {
+        "tier": "SILVER",
+        "rank": "II",
+        "lp": 76
+      }
+    },
+    "rolesPrincipales": [
+      {
+        "rol": "TOP",
+        "cantidad": 8,
+        "porcentaje": 80
+      },
+      {
+        "rol": "BOTTOM",
+        "cantidad": 1,
+        "porcentaje": 10
+      }
+    ],
+    "ultimaActualizacion": "2026-02-08T06:39:14.773Z"
+  }
+}

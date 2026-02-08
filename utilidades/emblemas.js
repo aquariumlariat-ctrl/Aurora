@@ -2,7 +2,7 @@
 
 // Emojis de rangos base
 const rankEmojis = {
-    'UNRANKED': '<:SinRango:1469186353601445998>',
+    'UNRANKED': '<:test:1469941168270872696>',
     'IRON': '<:Hierro:1465486905566171239>',
     'BRONZE': '<:Bronce:1465483354932514968>',
     'SILVER': '<:Plata:1465495513955827817>',
